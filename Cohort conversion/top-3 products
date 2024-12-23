@@ -1,0 +1,33 @@
+/* Для той же структуры, что и в файле download conversion, вывести топ 3 продукта с самой высокой конверсией в покупку в первую неделю после регистрации.
+ * В результате нужно вывести неделю регистрации, названия продуктов и их рейтинг. Первой датой регистрации в задаче считаем 01.01.2023
+ */ 
+--Решаю: 01.01.2023 - воскресенье, так что даты можно не двигать
+
+with a as (select * 
+from table t
+where eventName = 'register'
+order by time),
+b as (select * 
+from table t
+where eventName = 'buy'
+order by time),
+c as (select a.userId as rb_users, b.product as rb_products, date_trunс('week', a.time::timestamp) as week
+from a 
+join b  
+on a.userId=b.userId
+where b.time - a.time <= interval '1 week'),
+d as (select date_trunс('week', time::timestamp) as week, count(userId) as cnt1
+from a 
+group by week),
+e as (select week, rb_products, count(rb_users) as cnt2
+from c 
+group by week, rb_products),
+f as (select e.week, e.rb_products as product, round(cnt2/cnt1::numeric, 3) as CR
+from e
+join d  
+on e.week=d.week),
+h as (select week, product, rank() over(partition by week order by  CR desc) as rating
+from f)
+select *
+from h
+where rating <= 3
