@@ -1,0 +1,21 @@
+# В этом файле реализовано решение задачи cohort_conversion, но на языке Python, а не SQL.
+import pandas as pd 
+import datetime as dt
+# Предполагаем, что df уже существует и загружен 
+# Приводим столбец 'time' к формату datetime, если он еще не в этом формате 
+df['time'] = pd.to_datetime(df['time'])
+df1 = df[(df['time'] >= dt.datetime(2023, 3, 1)) & (df['eventName'] == 'register')] 
+# Группировка по неделям (среда как начало недели) и пользователям, считаем количество продуктов 
+df1_grouped = df1.groupby([pd.Grouper(key='time', freq='W-WED'), 'userId'])['product'].agg('count').reset_index()
+# Группировка по времени и подсчет зарегистрированных пользователей по неделям
+gr_df1 = df1_grouped.groupby('time')['userId'].agg('count').reset_index() 
+# Фильтрация данных по скачиваниям (eventName == 'download') df2 = df[(df['time'] >= dt.datetime(2023, 3, 1)) & (df['eventName'] == 'download')] 
+# Группировка по неделям (среда как начало недели) и пользователям, считаем количество скачанных продуктов 
+df2_grouped = df2.groupby([pd.Grouper(key='time', freq='W-WED'), 'userId'])['product'].agg('count').reset_index()
+# Объединение данных по времени и пользователям (сравниваем зарегистрировавшихся и скачавших) 
+df_combined = pd.merge(df1_grouped, df2_grouped, on=['time', 'userId'], how='inner', suffixes=('_register', '_download')) 
+# Группировка по времени (неделя) и подсчет уникальных пользователей, которые зарегистрировались и скачали продукты
+gr_df2 = df_combined.groupby('time')['userId'].agg('count').reset_index()
+# Создание итогового DataFrame с результатами
+df_res = pd.DataFrame({ 'week': gr_df1['time'], 'users': gr_df1['userId'], 'CR': gr_df2['userId'] / gr_df1['userId'] }) 
+print(df_res)
